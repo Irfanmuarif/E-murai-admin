@@ -3,211 +3,593 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin e-Murai</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Multi-Sheet Admin Panel</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-        .sidebar-btn.active { 
-            background-color: #2563eb; 
-            color: white; 
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        [contenteditable]:focus { 
-            outline: 2px solid #2563eb; 
-            background: #fff; 
-            padding: 4px; 
-            border-radius: 4px; 
+        body {
+            background-color: #f8f9fa;
         }
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .navbar {
+            background: var(--primary-gradient);
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+        .btn-primary-custom {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,.15);
+            color: white;
+        }
+        .content-wrapper {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+            border: none;
+            border-bottom: 3px solid transparent;
+        }
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: #e9ecef;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            background-color: transparent;
+            border-bottom: 3px solid #667eea;
+        }
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .action-buttons .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .alert-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 350px;
+        }
+        
+        /* --- PERUBAHAN UNTUK TABEL & MOBILE --- */
+        .table-responsive {
+            border-radius: 0.375rem; /* Sesuaikan dengan border-radius card */
+            box-shadow: inset 0 0 0 1px #dee2e6;
+        }
+        .table th, .table td {
+            /* Bungkus teks panjang di header dan sel */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px; /* Batas lebar maksimum untuk sel teks */
+        }
+        /* Khusus untuk kolom ikon */
+        .icon-cell {
+            width: 80px !important; /* Perkecil lebar kolom ikon */
+            max-width: 80px !important;
+            text-align: center;
+            vertical-align: middle;
+        }
+        /* Khusus untuk kolom aksi */
+        .action-cell {
+            width: 150px !important; /* Perkecil lebar kolom aksi */
+            max-width: 150px !important;
+            white-space: nowrap;
+        }
+
+        /* Style untuk ikon yang bisa diklik */
+        .clickable-icon {
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: transform 0.1s, color 0.2s;
+        }
+        .clickable-icon:hover {
+            transform: scale(1.2);
+        }
+        .clickable-icon.updating {
+            opacity: 0.5;
+            pointer-events: none; /* Nonaktifkan klik saat proses update */
+        }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body>
 
-    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col">
-        <div class="p-8">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="bg-blue-600 p-2 rounded-xl text-white">
-                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
-                </div>
-                <h1 class="text-xl font-bold text-slate-800 tracking-tight">e-Murai</h1>
-            </div>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[2px]">Management System</p>
+    <!-- Loader -->
+    <div id="loader" class="loader" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
+    </div>
 
-        <nav class="flex-1 px-6 space-y-3">
-            <button onclick="changeSheet(this, 'PENGUMUMAN')" class="sidebar-btn active w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
-                <i data-lucide="megaphone" class="w-5 h-5"></i>
-                <span class="font-semibold text-sm">Pengumuman</span>
-            </button>
-
-            <button onclick="changeSheet(this, 'UANG KAS')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
-                <i data-lucide="wallet" class="w-5 h-5"></i>
-                <span class="font-semibold text-sm">Uang Kas</span>
-            </button>
-
-            <button onclick="changeSheet(this, 'IURAN BULANAN')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
-                <i data-lucide="coins" class="w-5 h-5"></i>
-                <span class="font-semibold text-sm">Iuran Bulanan</span>
-            </button>
-
-            <button onclick="changeSheet(this, 'JADWAL RONDA')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
-                <i data-lucide="shield-check" class="w-5 h-5"></i>
-                <span class="font-semibold text-sm">Jadwal Ronda</span>
-            </button>
-        </nav>
-
-        <div class="p-6 border-t border-slate-100">
-            <div class="bg-slate-50 rounded-2xl p-4">
-                <p class="text-xs text-slate-500 text-center">Connected to Google Sheets</p>
-            </div>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-layers-fill"></i> Admin Panel RT
+            </span>
+            <span class="text-white">Mengelola: <strong id="sheetTitle">Loading...</strong></span>
         </div>
-    </aside>
+    </nav>
 
-    <main class="flex-1 flex flex-col h-full">
-        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-10 shrink-0">
-            <div>
-                <h2 id="current-sheet-title" class="text-2xl font-bold text-slate-800 uppercase tracking-tight">PENGUMUMAN</h2>
-            </div>
-            <div class="flex items-center gap-6">
-                <div id="status-container" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-medium border border-slate-100 hidden">
-                    <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                    <span id="status-text">Sinkronisasi...</span>
+    <!-- Alert Container -->
+    <div class="alert-container" id="alertContainer"></div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="content-wrapper">
+            <!-- Navigasi Tab -->
+            <ul class="nav nav-tabs" id="sheetTabs" role="tablist">
+                <!-- Tab akan di-generate oleh JavaScript -->
+            </ul>
+
+            <!-- Konten Tab -->
+            <div class="tab-content pt-4" id="sheetTabContent">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="h4">Data Tabel</h2>
+                    <button class="btn btn-success btn-sm" onclick="openCreateModal()">
+                        <i class="bi bi-plus-circle"></i> Tambah Data
+                    </button>
                 </div>
-                <button onclick="addRow()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-slate-200">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Tambah Data
-                </button>
-            </div>
-        </header>
-
-        <div class="p-10 flex-1 overflow-hidden">
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
-                <div class="overflow-auto custom-scroll h-full">
-                    <table class="w-full text-left border-collapse">
-                        <thead id="thead" class="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 border-b border-slate-200">
-                            </thead>
-                        <tbody id="tbody" class="divide-y divide-slate-100 text-slate-600">
-                            </tbody>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="dataTable">
+                        <thead class="table-light">
+                            <!-- Header akan di-generate oleh JavaScript -->
+                        </thead>
+                        <tbody>
+                            <!-- Baris data akan di-generate oleh JavaScript -->
+                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Modal Create/Update -->
+    <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="formModalLabel">Tambah Data Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="dataForm">
+                    <div class="modal-body" id="formModalBody">
+                        <!-- Input form akan di-generate oleh JavaScript -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary-custom">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Delete Confirmation -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menghapus baris ini?</p>
+                    <p class="text-danger"><strong>Tindakan ini tidak dapat dibatalkan.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="bi bi-trash"></i> Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        // MASUKKAN URL WEB APP ANDA DI SINI
-        const API = "https://script.google.com/macros/s/AKfycbyxvcSvrKp1LYuBisVdyhNjlO5RmHfA16KreXE37MMPqc4_LYbhDsVPLPaUr4IrlXZX/exec";
-        let currentSheet = "PENGUMUMAN";
+        // --- KONFIGURASI ---
+        const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA']; 
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxhuASeRqqPEaK3l7pw6k7uDWvFbnvjjOoDLbUeXucFUZsTCTKhFK5OXphQDezcKmRq/exec';
+        
+        // Sheet yang menggunakan ikon boolean
+        const BOOLEAN_SHEETS = ['IURAN BULANAN', 'JADWAL RONDA'];
 
-        window.onload = () => {
-            lucide.createIcons();
-            loadData();
-        };
+        let currentHeaders = [];
+        let currentAction = 'create';
+        let currentRowNumber = null;
+        let currentSheet = SHEETS[0];
 
-        async function changeSheet(btn, sheetName) {
-            document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
-            btn.classList.add('active');
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTabs();
+            loadData(currentSheet);
             
-            currentSheet = sheetName;
-            document.getElementById('current-sheet-title').innerText = sheetName;
-            loadData();
+            document.getElementById('dataForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+        });
+
+        // --- INISIALISASI TAB ---
+        function initializeTabs() {
+            const tabList = document.getElementById('sheetTabs');
+            SHEETS.forEach((sheetName, index) => {
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                li.setAttribute('role', 'presentation');
+
+                const button = document.createElement('button');
+                button.className = `nav-link ${index === 0 ? 'active' : ''}`;
+                button.setAttribute('type', 'button');
+                button.setAttribute('role', 'tab');
+                button.textContent = sheetName;
+                button.onclick = () => switchSheet(sheetName, button);
+
+                li.appendChild(button);
+                tabList.appendChild(li);
+            });
         }
 
-        async function loadData() {
-            showStatus("Memuat data...");
+        function switchSheet(sheetName, buttonElement) {
+            document.querySelectorAll('#sheetTabs .nav-link').forEach(btn => btn.classList.remove('active'));
+            buttonElement.classList.add('active');
+            currentSheet = sheetName;
+            document.getElementById('sheetTitle').innerText = currentSheet;
+            loadData(currentSheet);
+        }
+
+        // --- FUNGSI-FUNGSI UTAMA ---
+
+        async function loadData(sheetName) {
+            showLoader(true);
             try {
-                const res = await fetch(`${API}?sheet=${encodeURIComponent(currentSheet)}`, {
-                    method: "GET",
-                    redirect: "follow"
-                });
-                const data = await res.json();
-
-                if (data.error) throw new Error(data.error);
-
-                // Render Header
-                const thead = document.getElementById("thead");
-                thead.innerHTML = `<tr>${data.headers.map(h => `<th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[1px]">${h}</th>`).join("")}<th class="px-8 py-5 text-right font-bold text-slate-400 uppercase text-[11px]">Aksi</th></tr>`;
-
-                // Render Rows
-                const tbody = document.getElementById("tbody");
-                tbody.innerHTML = data.rows.map(r => `
-                    <tr class="hover:bg-slate-50/50 transition-colors">
-                        ${data.headers.map(h => `
-                            <td class="px-8 py-4 text-sm font-medium border-slate-100" 
-                                contenteditable="true" 
-                                onblur="handleAutoSave(event, ${r._row})">${r[h] || ""}</td>
-                        `).join("")}
-                        <td class="px-8 py-4 text-right">
-                            <button onclick="hapus(${r._row})" class="text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all active:scale-90">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join("");
+                const response = await fetch(`${API_URL}?sheet=${sheetName}`);
+                const result = await response.json();
                 
-                lucide.createIcons();
-                hideStatus();
-            } catch (err) {
-                alert("Koneksi Error: " + err.message);
-                hideStatus();
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                currentHeaders = result.headers;
+                renderTable(result.headers, result.rows);
+                
+            } catch (error) {
+                showAlert('Gagal memuat data: ' + error.message, 'danger');
+                document.querySelector('#dataTable thead').innerHTML = '';
+                document.querySelector('#dataTable tbody').innerHTML = '';
+            } finally {
+                showLoader(false);
             }
         }
 
-        async function handleAutoSave(event, row) {
-            const cells = [...event.target.parentElement.children]
-                .slice(0, -1)
-                .map(td => td.innerText);
+        function renderTable(headers, rows) {
+            const tableHead = document.querySelector('#dataTable thead');
+            const tableBody = document.querySelector('#dataTable tbody');
             
-            showStatus("Menyimpan...");
-            await fetch(API, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({
-                    action: "update",
-                    sheet: currentSheet,
-                    row,
-                    values: cells
-                })
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            if (headers.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = "100%";
+                td.className = "text-center text-muted";
+                td.textContent = "Tidak ada data atau sheet kosong.";
+                tr.appendChild(td);
+                tableBody.appendChild(tr);
+                return;
+            }
+
+            // Buat header
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
             });
-            setTimeout(() => hideStatus(), 1000);
-        }
+            const thAction = document.createElement('th');
+            thAction.textContent = 'Aksi';
+            thAction.className = 'action-cell';
+            headerRow.appendChild(thAction);
+            tableHead.appendChild(headerRow);
 
-        async function hapus(row) {
-            if (!confirm("Hapus baris ini?")) return;
-            showStatus("Menghapus...");
-            await fetch(API, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({ action: "delete", sheet: currentSheet, row })
+            // Buat baris data
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    const cellValue = row[header];
+
+                    // Tampilkan ikon untuk data boolean di sheet tertentu
+                    if (BOOLEAN_SHEETS.includes(currentSheet) && typeof cellValue === 'boolean') {
+                        td.className = 'icon-cell'; // Tambahkan class untuk styling
+                        const icon = document.createElement('i');
+                        icon.className = 'clickable-icon bi ';
+                        
+                        if (cellValue) {
+                            icon.className += 'bi-check-circle-fill text-success';
+                            icon.title = 'Selesai. Klik untuk ubah.';
+                        } else {
+                            icon.className += 'bi-x-circle-fill text-danger';
+                            icon.title = 'Belum Selesai. Klik untuk ubah.';
+                        }
+                        
+                        // Kirim elemen ikon itu sendiri ke fungsi
+                        icon.onclick = () => toggleBoolean(row._row, header, !cellValue, icon);
+                        td.appendChild(icon);
+                    } else {
+                        td.textContent = cellValue || '';
+                    }
+                    tr.appendChild(td);
+                });
+                
+                const tdAction = document.createElement('td');
+                tdAction.className = 'action-cell';
+                let actionButtonsHTML = '';
+                if (BOOLEAN_SHEETS.includes(currentSheet)) {
+                    actionButtonsHTML = `<button class="btn btn-danger btn-sm w-100" onclick="openDeleteModal(${row._row})"><i class="bi bi-trash"></i> Hapus</button>`;
+                } else {
+                    actionButtonsHTML = `
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-warning btn-sm" onclick="openUpdateModal(${row._row}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${row._row})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+                tdAction.innerHTML = actionButtonsHTML;
+                tr.appendChild(tdAction);
+                tableBody.appendChild(tr);
             });
-            loadData();
+        }
+        
+        // --- MODAL HANDLERS ---
+        function openCreateModal() {
+            currentAction = 'create';
+            document.getElementById('formModalLabel').innerText = `Tambah Data Baru ke ${currentSheet}`;
+            generateFormFields();
+            new bootstrap.Modal(document.getElementById('formModal')).show();
         }
 
-        async function addRow() {
-            const headersCount = document.querySelectorAll("#thead th").length - 1;
-            if (headersCount <= 0) return;
+        function openUpdateModal(rowNumber, rowData) {
+            currentAction = 'update';
+            currentRowNumber = rowNumber;
+            document.getElementById('formModalLabel').innerText = `Edit Data di ${currentSheet}`;
+            generateFormFields(rowData);
+            new bootstrap.Modal(document.getElementById('formModal')).show();
+        }
+        
+        function openDeleteModal(rowNumber) {
+            currentRowNumber = rowNumber;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
 
-            showStatus("Menambah...");
-            const values = Array(headersCount).fill("");
-            await fetch(API, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({ action: "create", sheet: currentSheet, values })
+        // --- FORM & CRUD ACTIONS ---
+        function generateFormFields(data = {}) {
+            const formBody = document.getElementById('formModalBody');
+            formBody.innerHTML = '';
+
+            if (currentHeaders.length === 0) {
+                formBody.innerHTML = '<p class="text-muted">Tidak ada kolom untuk diisi.</p>';
+                return;
+            }
+
+            currentHeaders.forEach(header => {
+                const formGroup = document.createElement('div');
+                formGroup.className = 'mb-3';
+                
+                const label = document.createElement('label');
+                label.htmlFor = `input-${header}`;
+                label.className = 'form-label';
+                label.textContent = header;
+                
+                if (typeof data[header] === 'boolean') {
+                    formGroup.className = 'mb-3 form-check';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.id = `input-${header}`;
+                    input.name = header;
+                    input.checked = data[header];
+                    formGroup.appendChild(input);
+                    formGroup.appendChild(label);
+                } else {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.id = `input-${header}`;
+                    input.name = header;
+                    input.value = (data[header] !== undefined && data[header] !== null) ? data[header] : '';
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(input);
+                }
+                formBody.appendChild(formGroup);
             });
-            loadData();
         }
 
-        function showStatus(text) {
-            const container = document.getElementById('status-container');
-            document.getElementById('status-text').innerText = text;
-            container.classList.remove('hidden');
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const values = currentHeaders.map(header => {
+                const val = formData.get(header);
+                if (typeof form.elements[`input-${header}`]?.type === 'checkbox') {
+                    return val === 'on';
+                }
+                return val || '';
+            });
+            
+            showLoader(true);
+            let payload = {
+                sheet: currentSheet,
+                action: currentAction,
+                values: values
+            };
+            if (currentAction === 'update') {
+                payload.row = currentRowNumber;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                showAlert(`Data berhasil ${currentAction === 'create' ? 'ditambahkan' : 'diperbarui'}!`, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('formModal')).hide();
+                form.reset();
+                loadData(currentSheet);
+
+            } catch (error) {
+                showAlert('Terjadi kesalahan: ' + error.message, 'danger');
+            } finally {
+                showLoader(false);
+            }
         }
 
-        function hideStatus() {
-            document.getElementById('status-container').classList.add('hidden');
+        async function confirmDelete() {
+            showLoader(true);
+            const payload = {
+                sheet: currentSheet,
+                action: 'delete',
+                row: currentRowNumber
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                showAlert('Data berhasil dihapus!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                loadData(currentSheet);
+
+            } catch (error) {
+                showAlert('Terjadi kesalahan: ' + error.message, 'danger');
+            } finally {
+                showLoader(false);
+            }
         }
+
+        // --- FUNGSI UNTUK TOGGLE BOOLEAN (PERFORMA LEBIH CEPAT) ---
+        async function toggleBoolean(rowNumber, columnName, newValue, iconElement) {
+            const originalClasses = iconElement.className;
+            const originalTitle = iconElement.title;
+
+            // 1. Berikan feedback visual INSTANT
+            if (newValue) {
+                iconElement.className = 'clickable-icon bi bi-check-circle-fill text-success';
+                iconElement.title = 'Selesai. Klik untuk ubah.';
+            } else {
+                iconElement.className = 'clickable-icon bi bi-x-circle-fill text-danger';
+                iconElement.title = 'Belum Selesai. Klik untuk ubah.';
+            }
+            
+            // 2. Tandai ikon sedang di-update
+            iconElement.classList.add('updating');
+
+            const payload = {
+                sheet: currentSheet,
+                action: 'updateCell',
+                row: rowNumber,
+                column: columnName,
+                value: newValue
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                showAlert(result.message || 'Status berhasil diperbarui!', 'success');
+                // Tidak perlu loadData() lagi, sudah cepat!
+
+            } catch (error) {
+                // 3. JIKA GAGAL, kembalikan ikon ke semula
+                showAlert('Gagal memperbarui status: ' + error.message, 'danger');
+                iconElement.className = originalClasses;
+                iconElement.title = originalTitle;
+            } finally {
+                // 4. Hapus tanda "updating"
+                iconElement.classList.remove('updating');
+            }
+        }
+
+
+        // --- UTILITIES ---
+        function showLoader(show) {
+            document.getElementById('loader').style.display = show ? 'flex' : 'none';
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
     </script>
 </body>
 </html>
