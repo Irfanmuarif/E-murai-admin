@@ -1,231 +1,213 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Admin Dashboard - Spreadsheet API</title>
+    <title>Dashboard Admin e-Murai</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .sidebar-btn.active { 
+            background-color: #2563eb; 
+            color: white; 
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+        [contenteditable]:focus { 
+            outline: 2px solid #2563eb; 
+            background: #fff; 
+            padding: 4px; 
+            border-radius: 4px; 
+        }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="flex h-screen overflow-hidden">
 
-    <div class="min-h-screen flex flex-col md:flex-row">
-        <aside class="w-full md:w-64 bg-slate-900 text-white p-6">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="bg-blue-500 p-2 rounded-lg">
-                    <i data-lucide="database" class="w-6 h-6"></i>
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="bg-blue-600 p-2 rounded-xl text-white">
+                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight">SheetAdmin</h1>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">e-Murai</h1>
             </div>
-            <nav class="space-y-2">
-                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg flex items-center gap-3 border border-blue-600/30">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    <span>Dashboard</span>
-                </div>
-            </nav>
-        </aside>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[2px]">Management System</p>
+        </div>
 
-        <main class="flex-1 p-4 md:p-10 overflow-x-hidden">
-            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-slate-900">Database Management</h2>
-                    <p class="text-slate-500">Kelola data spreadsheet Anda secara realtime.</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="openColumnModal()" class="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition shadow-sm">
-                        <i data-lucide="plus-square" class="w-4 h-4 text-slate-600"></i>
-                        <span>Tambah Kolom</span>
-                    </button>
-                    <button onclick="openModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>Tambah Baris</span>
-                    </button>
-                </div>
-            </header>
+        <nav class="flex-1 px-6 space-y-3">
+            <button onclick="changeSheet(this, 'PENGUMUMAN')" class="sidebar-btn active w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
+                <i data-lucide="megaphone" class="w-5 h-5"></i>
+                <span class="font-semibold text-sm">Pengumuman</span>
+            </button>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div class="relative w-64">
-                        <input type="text" id="sheetNameInput" placeholder="Nama Sheet (Contoh: Sheet1)" value="Sheet1" class="w-full pl-10 pr-4 py-2 rounded-md border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
-                    </div>
-                    <button onclick="loadData()" class="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Segarkan
-                    </button>
+            <button onclick="changeSheet(this, 'UANG KAS')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
+                <i data-lucide="wallet" class="w-5 h-5"></i>
+                <span class="font-semibold text-sm">Uang Kas</span>
+            </button>
+
+            <button onclick="changeSheet(this, 'IURAN BULANAN')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
+                <i data-lucide="coins" class="w-5 h-5"></i>
+                <span class="font-semibold text-sm">Iuran Bulanan</span>
+            </button>
+
+            <button onclick="changeSheet(this, 'JADWAL RONDA')" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all group">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <span class="font-semibold text-sm">Jadwal Ronda</span>
+            </button>
+        </nav>
+
+        <div class="p-6 border-t border-slate-100">
+            <div class="bg-slate-50 rounded-2xl p-4">
+                <p class="text-xs text-slate-500 text-center">Connected to Google Sheets</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full">
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-10 shrink-0">
+            <div>
+                <h2 id="current-sheet-title" class="text-2xl font-bold text-slate-800 uppercase tracking-tight">PENGUMUMAN</h2>
+            </div>
+            <div class="flex items-center gap-6">
+                <div id="status-container" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-medium border border-slate-100 hidden">
+                    <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                    <span id="status-text">Sinkronisasi...</span>
                 </div>
-                
-                <div class="overflow-x-auto">
+                <button onclick="addRow()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-slate-200">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Tambah Data
+                </button>
+            </div>
+        </header>
+
+        <div class="p-10 flex-1 overflow-hidden">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+                <div class="overflow-auto custom-scroll h-full">
                     <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr id="tableHeader" class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold tracking-wider">
-                                </tr>
-                        </thead>
-                        <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
+                        <thead id="thead" class="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 border-b border-slate-200">
+                            </thead>
+                        <tbody id="tbody" class="divide-y divide-slate-100 text-slate-600">
                             </tbody>
                     </table>
                 </div>
-                
-                <div id="loadingState" class="hidden p-20 flex flex-col items-center justify-center">
-                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-                    <p class="text-slate-500 animate-pulse">Menghubungkan ke API...</p>
-                </div>
             </div>
-        </main>
-    </div>
-
-    <div id="modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 id="modalTitle" class="text-xl font-bold">Tambah Data</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition"><i data-lucide="x"></i></button>
-            </div>
-            <form id="dataForm" class="p-6 space-y-4">
-                <input type="hidden" id="editRowNumber">
-                <div id="formInputs" class="grid grid-cols-1 gap-4">
-                    </div>
-                <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-slate-600 font-medium">Batal</button>
-                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">Simpan Data</button>
-                </div>
-            </form>
         </div>
-    </div>
+    </main>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxULcQjQAV-Lo6QiJwuAcpNL-vJYOtZsyy6JatS7ztrZUEqK5LFvUHUJW0vyNbOmHbV/exec";
-        let currentHeaders = [];
+        // MASUKKAN URL WEB APP ANDA DI SINI
+        const API = "https://script.google.com/macros/s/AKfycbyxvcSvrKp1LYuBisVdyhNjlO5RmHfA16KreXE37MMPqc4_LYbhDsVPLPaUr4IrlXZX/exec";
+        let currentSheet = "PENGUMUMAN";
 
-        // Initialize Lucide Icons
-        lucide.createIcons();
+        window.onload = () => {
+            lucide.createIcons();
+            loadData();
+        };
+
+        async function changeSheet(btn, sheetName) {
+            document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            
+            currentSheet = sheetName;
+            document.getElementById('current-sheet-title').innerText = sheetName;
+            loadData();
+        }
 
         async function loadData() {
-            const sheet = document.getElementById('sheetNameInput').value;
-            const tableHeader = document.getElementById('tableHeader');
-            const tableBody = document.getElementById('tableBody');
-            const loader = document.getElementById('loadingState');
-
-            tableBody.innerHTML = "";
-            loader.classList.remove('hidden');
-
+            showStatus("Memuat data...");
             try {
-                const res = await fetch(`${API_URL}?sheet=${sheet}`);
+                const res = await fetch(`${API}?sheet=${encodeURIComponent(currentSheet)}`, {
+                    method: "GET",
+                    redirect: "follow"
+                });
                 const data = await res.json();
-                
+
                 if (data.error) throw new Error(data.error);
 
-                currentHeaders = data.headers;
-                
-                // Render Headers
-                tableHeader.innerHTML = data.headers.map(h => `<th class="px-6 py-4">${h}</th>`).join('') + '<th class="px-6 py-4 text-right">Aksi</th>';
-                
+                // Render Header
+                const thead = document.getElementById("thead");
+                thead.innerHTML = `<tr>${data.headers.map(h => `<th class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-[1px]">${h}</th>`).join("")}<th class="px-8 py-5 text-right font-bold text-slate-400 uppercase text-[11px]">Aksi</th></tr>`;
+
                 // Render Rows
-                tableBody.innerHTML = data.rows.map(row => `
-                    <tr class="hover:bg-blue-50/50 transition duration-150">
-                        ${data.headers.map(h => `<td class="px-6 py-4 text-slate-600">${row[h] || '-'}</td>`).join('')}
-                        <td class="px-6 py-4 text-right space-x-2">
-                            <button onclick="editRow(${JSON.stringify(row).replace(/"/g, '&quot;')})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                            <button onclick="deleteRow(${row._row})" class="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                const tbody = document.getElementById("tbody");
+                tbody.innerHTML = data.rows.map(r => `
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        ${data.headers.map(h => `
+                            <td class="px-8 py-4 text-sm font-medium border-slate-100" 
+                                contenteditable="true" 
+                                onblur="handleAutoSave(event, ${r._row})">${r[h] || ""}</td>
+                        `).join("")}
+                        <td class="px-8 py-4 text-right">
+                            <button onclick="hapus(${r._row})" class="text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all active:scale-90">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
                         </td>
                     </tr>
-                `).join('');
-
+                `).join("");
+                
                 lucide.createIcons();
+                hideStatus();
             } catch (err) {
-                alert("Error: " + err.message);
-            } finally {
-                loader.classList.add('hidden');
+                alert("Koneksi Error: " + err.message);
+                hideStatus();
             }
         }
 
-        // --- CRUD ACTIONS ---
-
-        document.getElementById('dataForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const sheet = document.getElementById('sheetNameInput').value;
-            const rowNumber = document.getElementById('editRowNumber').value;
-            const action = rowNumber ? "update" : "create";
+        async function handleAutoSave(event, row) {
+            const cells = [...event.target.parentElement.children]
+                .slice(0, -1)
+                .map(td => td.innerText);
             
-            const values = currentHeaders.map(h => document.getElementById(`input-${h}`).value);
-            
-            const payload = { sheet, action, values };
-            if (rowNumber) payload.row = parseInt(rowNumber);
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-                const result = await res.json();
-                if (result.success) {
-                    closeModal();
-                    loadData();
-                }
-            } catch (err) { alert("Gagal menyimpan data"); }
-        };
-
-        async function deleteRow(rowNumber) {
-            if (!confirm("Hapus baris ini?")) return;
-            const sheet = document.getElementById('sheetNameInput').value;
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: "delete", sheet, row: rowNumber })
-                });
-                loadData();
-            } catch (err) { alert("Gagal menghapus"); }
-        }
-
-        async function openColumnModal() {
-            const colName = prompt("Masukkan nama kolom baru:");
-            if (!colName) return;
-            const sheet = document.getElementById('sheetNameInput').value;
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: "addColumn", sheet, columnName: colName })
-                });
-                loadData();
-            } catch (err) { alert("Gagal menambah kolom"); }
-        }
-
-        // --- UI HELPERS ---
-
-        function openModal(isEdit = false) {
-            const formInputs = document.getElementById('formInputs');
-            document.getElementById('modalTitle').innerText = isEdit ? "Edit Data" : "Tambah Data";
-            
-            formInputs.innerHTML = currentHeaders.map(h => `
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">${h}</label>
-                    <input type="text" id="input-${h}" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-            `).join('');
-            
-            document.getElementById('modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('modal').classList.add('hidden');
-            document.getElementById('editRowNumber').value = "";
-            document.getElementById('dataForm').reset();
-        }
-
-        function editRow(rowData) {
-            openModal(true);
-            document.getElementById('editRowNumber').value = rowData._row;
-            currentHeaders.forEach(h => {
-                document.getElementById(`input-${h}`).value = rowData[h] || "";
+            showStatus("Menyimpan...");
+            await fetch(API, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({
+                    action: "update",
+                    sheet: currentSheet,
+                    row,
+                    values: cells
+                })
             });
+            setTimeout(() => hideStatus(), 1000);
         }
 
-        // Initial Load
-        loadData();
+        async function hapus(row) {
+            if (!confirm("Hapus baris ini?")) return;
+            showStatus("Menghapus...");
+            await fetch(API, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ action: "delete", sheet: currentSheet, row })
+            });
+            loadData();
+        }
+
+        async function addRow() {
+            const headersCount = document.querySelectorAll("#thead th").length - 1;
+            if (headersCount <= 0) return;
+
+            showStatus("Menambah...");
+            const values = Array(headersCount).fill("");
+            await fetch(API, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ action: "create", sheet: currentSheet, values })
+            });
+            loadData();
+        }
+
+        function showStatus(text) {
+            const container = document.getElementById('status-container');
+            document.getElementById('status-text').innerText = text;
+            container.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            document.getElementById('status-container').classList.add('hidden');
+        }
     </script>
 </body>
 </html>
