@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxXORS39XmzkXsu5P1MmPwJviq_L427ppUWy-P2LGzrVsRvYfLH7Vxe6mGPAfT42SBp/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzSVd9ovcDfmHZFB16_P6ycpcewjVgkw-xDgbgYqI2YcBvkdu_XkZ8YbTRtd1NJdhJ_/exec';
 const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA'];
 const BOOLEAN_SHEETS = ['IURAN BULANAN', 'JADWAL RONDA'];
 
