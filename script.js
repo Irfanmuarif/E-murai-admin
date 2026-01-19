@@ -2,8 +2,7 @@
 // KONFIGURASI APLIKASI
 // =========================
 const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA'];
-// GANTI DENGAN URL DEPLOYMENT ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbyje_h9Tefl0MMnEOUmJ-wSs_OEgO7iuwjo50s5Nezo6rtCR4C9M2NHC9uKcNpqcbez/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwTb1EtfcKgqKhIDJypTLrw7Iju9SerYf7ynabqT_U7h1IkiVa-IXQgdScEJRxnidK9/exec';
 const BOOLEAN_SHEETS = ['IURAN BULANAN', 'JADWAL RONDA'];
 
 // =========================
@@ -19,7 +18,6 @@ let booleanChanges = {};
 // INISIALISASI APLIKASI
 // =========================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Aplikasi dimulai...');
     initializeTabs();
     loadData(currentSheet);
     
@@ -50,7 +48,6 @@ function initializeTabs() {
 }
 
 function switchSheet(sheetName, buttonElement) {
-    console.log(`Beralih ke sheet: ${sheetName}`);
     document.querySelectorAll('#sheetTabs .nav-link').forEach(btn => btn.classList.remove('active'));
     buttonElement.classList.add('active');
     currentSheet = sheetName;
@@ -64,20 +61,9 @@ function switchSheet(sheetName, buttonElement) {
 // =========================
 async function loadData(sheetName) {
     showLoader(true);
-    console.log(`Memuat data dari sheet: ${sheetName}`);
-    
     try {
-        const response = await fetchWithTimeout(`${API_URL}?sheet=${encodeURIComponent(sheetName)}`, {
-            method: 'GET',
-            timeout: 30000 // 30 detik timeout
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await fetch(`${API_URL}?sheet=${sheetName}`);
         const result = await response.json();
-        console.log('Data diterima:', result);
         
         if (result.error) {
             throw new Error(result.error);
@@ -87,7 +73,6 @@ async function loadData(sheetName) {
         renderTable(result.headers, result.rows);
         
     } catch (error) {
-        console.error('Error loading data:', error);
         showAlert('Gagal memuat data: ' + error.message, 'danger');
         document.querySelector('#dataTable thead').innerHTML = '';
         document.querySelector('#dataTable tbody').innerHTML = '';
@@ -149,7 +134,7 @@ function renderTable(headers, rows) {
             const td = document.createElement('td');
             const cellValue = row[header];
 
-            if (BOOLEAN_SHEETS.includes(currentSheet) && (cellValue === true || cellValue === false)) {
+            if (BOOLEAN_SHEETS.includes(currentSheet) && typeof cellValue === 'boolean') {
                 td.className = 'icon-cell';
                 
                 const checkboxContainer = document.createElement('div');
@@ -158,7 +143,7 @@ function renderTable(headers, rows) {
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.className = 'form-check-input boolean-checkbox';
-                checkbox.checked = Boolean(cellValue);
+                checkbox.checked = cellValue;
                 checkbox.dataset.row = row._row;
                 checkbox.dataset.column = header;
                 checkbox.dataset.original = cellValue;
@@ -169,8 +154,12 @@ function renderTable(headers, rows) {
                 
                 checkboxContainer.appendChild(checkbox);
                 td.appendChild(checkboxContainer);
+            } else if (cellValue instanceof Date) {
+                td.textContent = cellValue.toLocaleDateString('id-ID');
+            } else if (cellValue === true || cellValue === false) {
+                td.textContent = cellValue ? 'Ya' : 'Tidak';
             } else {
-                td.textContent = cellValue !== undefined && cellValue !== null ? String(cellValue) : '';
+                td.textContent = cellValue || '';
             }
             tr.appendChild(td);
         });
@@ -214,15 +203,10 @@ function handleCheckboxChange(checkbox) {
     
     updateSaveButton();
     
-    // Tandai checkbox yang berubah
-    if (String(newValue) !== checkbox.dataset.original) {
+    if (newValue.toString() !== checkbox.dataset.original) {
         checkbox.classList.add('checkbox-changed');
     } else {
         checkbox.classList.remove('checkbox-changed');
-        delete booleanChanges[rowNum][colName];
-        if (Object.keys(booleanChanges[rowNum]).length === 0) {
-            delete booleanChanges[rowNum];
-        }
     }
 }
 
@@ -231,18 +215,19 @@ function updateSaveButton() {
     const hasChanges = Object.keys(booleanChanges).length > 0;
     
     if (saveBtn) {
-        saveBtn.style.display = hasChanges ? 'inline-block' : 'none';
+        saveBtn.style.display = hasChanges ? 'block' : 'none';
         
         let changeCount = 0;
         Object.values(booleanChanges).forEach(colChanges => {
             changeCount += Object.keys(colChanges).length;
         });
         
-        if (changeCount > 0) {
-            saveBtn.innerHTML = `<i class="bi bi-check-square"></i> Simpan ${changeCount} Perubahan`;
-            saveBtn.disabled = false;
-        } else {
-            saveBtn.style.display = 'none';
+        saveBtn.innerHTML = `<i class="bi bi-check-square"></i> Simpan ${changeCount} Perubahan`;
+        
+        // Tambah event listener jika belum ada
+        if (!saveBtn.hasEventListener) {
+            saveBtn.addEventListener('click', saveBooleanChanges);
+            saveBtn.hasEventListener = true;
         }
     }
 }
@@ -253,14 +238,9 @@ async function saveBooleanChanges() {
         return;
     }
     
-    const saveBtn = document.getElementById('saveBooleanChanges');
-    if (saveBtn) saveBtn.disabled = true;
-    
     showLoader(true);
-    console.log('Menyimpan perubahan:', booleanChanges);
     
     try {
-        // Format updates
         const updates = [];
         Object.keys(booleanChanges).forEach(rowNum => {
             Object.keys(booleanChanges[rowNum]).forEach(colName => {
@@ -272,50 +252,33 @@ async function saveBooleanChanges() {
             });
         });
         
-        console.log('Updates to send:', updates);
-        
         const payload = {
             sheet: currentSheet,
             action: 'updateBatch',
             updates: updates
         };
         
-        console.log('Payload:', payload);
-        
-        const response = await fetchWithTimeout(API_URL, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload),
-            timeout: 30000
+            body: JSON.stringify(payload)
         });
         
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const result = await response.json();
-        console.log('Save result:', result);
         
         if (result.error) {
             throw new Error(result.error);
         }
         
-        showAlert(`✅ Berhasil menyimpan ${result.successCount || updates.length} perubahan!`, 'success');
+        showAlert(`Berhasil menyimpan ${result.updated || updates.length} perubahan!`, 'success');
         resetBooleanChanges();
-        
-        // Reload data untuk sinkronisasi
-        setTimeout(() => loadData(currentSheet), 1000);
+        loadData(currentSheet);
         
     } catch (error) {
-        console.error('Error saving changes:', error);
-        showAlert(`❌ Gagal menyimpan perubahan: ${error.message}`, 'danger');
-        
-        // Re-enable save button
-        if (saveBtn) saveBtn.disabled = false;
+        showAlert('Gagal menyimpan perubahan: ' + error.message, 'danger');
+        loadData(currentSheet); // Reload untuk reset state
     } finally {
         showLoader(false);
     }
@@ -326,7 +289,6 @@ function resetBooleanChanges() {
     const saveBtn = document.getElementById('saveBooleanChanges');
     if (saveBtn) {
         saveBtn.style.display = 'none';
-        saveBtn.disabled = false;
     }
     document.querySelectorAll('.checkbox-changed').forEach(cb => {
         cb.classList.remove('checkbox-changed');
@@ -373,13 +335,10 @@ function generateFormFields(data = {}) {
 
     currentHeaders.forEach(header => {
         const formGroup = document.createElement('div');
-        const value = data[header];
+        const isBooleanField = BOOLEAN_SHEETS.includes(currentSheet) && 
+                              typeof data[header] === 'boolean';
         
-        // Cek apakah ini field boolean
-        if (BOOLEAN_SHEETS.includes(currentSheet) && 
-            (value === true || value === false || 
-             currentSheet.includes('IURAN') || currentSheet.includes('RONDA'))) {
-            
+        if (isBooleanField) {
             formGroup.className = 'mb-3 form-check';
             
             const checkbox = document.createElement('input');
@@ -387,7 +346,7 @@ function generateFormFields(data = {}) {
             checkbox.className = 'form-check-input';
             checkbox.id = `input-${header}`;
             checkbox.name = header;
-            checkbox.checked = Boolean(value);
+            checkbox.checked = data[header] || false;
             
             const label = document.createElement('label');
             label.htmlFor = `input-${header}`;
@@ -409,7 +368,8 @@ function generateFormFields(data = {}) {
             input.className = 'form-control';
             input.id = `input-${header}`;
             input.name = header;
-            input.value = (value !== undefined && value !== null) ? String(value) : '';
+            input.value = (data[header] !== undefined && data[header] !== null) ? data[header] : '';
+            input.required = true;
             
             formGroup.appendChild(label);
             formGroup.appendChild(input);
@@ -436,8 +396,7 @@ async function handleFormSubmit(event) {
     });
     
     showLoader(true);
-    
-    const payload = {
+    let payload = {
         sheet: currentSheet,
         action: currentAction,
         values: values
@@ -448,41 +407,27 @@ async function handleFormSubmit(event) {
     }
 
     try {
-        console.log('Sending form data:', payload);
-        
-        const response = await fetchWithTimeout(API_URL, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload),
-            timeout: 30000
+            body: JSON.stringify(payload)
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const result = await response.json();
-        console.log('Form submit result:', result);
 
         if (result.error) {
             throw new Error(result.error);
         }
 
-        showAlert(`✅ Data berhasil ${currentAction === 'create' ? 'ditambahkan' : 'diperbarui'}!`, 'success');
-        
-        const modal = bootstrap.Modal.getInstance(document.getElementById('formModal'));
-        if (modal) modal.hide();
-        
+        showAlert(`Data berhasil ${currentAction === 'create' ? 'ditambahkan' : 'diperbarui'}!`, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('formModal')).hide();
         form.reset();
-        
-        // Tunggu sebentar sebelum reload
-        setTimeout(() => loadData(currentSheet), 1000);
+        loadData(currentSheet);
 
     } catch (error) {
-        console.error('Form submit error:', error);
-        showAlert('❌ Terjadi kesalahan: ' + error.message, 'danger');
+        showAlert('Terjadi kesalahan: ' + error.message, 'danger');
     } finally {
         showLoader(false);
     }
@@ -490,7 +435,6 @@ async function handleFormSubmit(event) {
 
 async function confirmDelete() {
     showLoader(true);
-    
     const payload = {
         sheet: currentSheet,
         action: 'delete',
@@ -498,39 +442,26 @@ async function confirmDelete() {
     };
 
     try {
-        console.log('Deleting row:', payload);
-        
-        const response = await fetchWithTimeout(API_URL, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload),
-            timeout: 30000
+            body: JSON.stringify(payload)
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const result = await response.json();
-        console.log('Delete result:', result);
 
         if (result.error) {
             throw new Error(result.error);
         }
         
-        showAlert('✅ Data berhasil dihapus!', 'success');
-        
-        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-        if (modal) modal.hide();
-        
-        // Tunggu sebentar sebelum reload
-        setTimeout(() => loadData(currentSheet), 1000);
+        showAlert('Data berhasil dihapus!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        loadData(currentSheet);
 
     } catch (error) {
-        console.error('Delete error:', error);
-        showAlert('❌ Terjadi kesalahan: ' + error.message, 'danger');
+        showAlert('Terjadi kesalahan: ' + error.message, 'danger');
     } finally {
         showLoader(false);
     }
@@ -540,55 +471,24 @@ async function confirmDelete() {
 // FUNGSI UTILITY
 // =========================
 function showLoader(show) {
-    const loader = document.getElementById('loader');
-    if (loader) {
-        loader.style.display = show ? 'flex' : 'none';
-    }
+    document.getElementById('loader').style.display = show ? 'flex' : 'none';
 }
 
 function showAlert(message, type) {
     const alertContainer = document.getElementById('alertContainer');
-    if (!alertContainer) return;
-    
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
-        <div class="d-flex align-items-center">
-            <div class="flex-grow-1">${message}</div>
-            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     alertContainer.appendChild(alertDiv);
 
-    // Auto remove after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentNode === alertContainer) {
             alertDiv.remove();
         }
     }, 5000);
-}
-
-// Fetch dengan timeout
-async function fetchWithTimeout(url, options = {}) {
-    const { timeout = 30000, ...fetchOptions } = options;
-    
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-        const response = await fetch(url, {
-            ...fetchOptions,
-            signal: controller.signal
-        });
-        clearTimeout(id);
-        return response;
-    } catch (error) {
-        clearTimeout(id);
-        if (error.name === 'AbortError') {
-            throw new Error(`Request timeout setelah ${timeout}ms`);
-        }
-        throw error;
-    }
 }
 
 // =========================
@@ -598,31 +498,3 @@ window.openCreateModal = openCreateModal;
 window.openUpdateModal = openUpdateModal;
 window.openDeleteModal = openDeleteModal;
 window.saveBooleanChanges = saveBooleanChanges;
-
-// =========================
-// DEBUGGING HELPERS
-// =========================
-window.debugChanges = function() {
-    console.log('Current booleanChanges:', booleanChanges);
-    console.log('Current sheet:', currentSheet);
-    console.log('Current headers:', currentHeaders);
-    
-    const checkboxes = document.querySelectorAll('.boolean-checkbox');
-    console.log('Total checkboxes:', checkboxes.length);
-    
-    checkboxes.forEach((cb, index) => {
-        console.log(`Checkbox ${index}:`, {
-            row: cb.dataset.row,
-            column: cb.dataset.column,
-            checked: cb.checked,
-            original: cb.dataset.original
-        });
-    });
-    
-    alert(`Debug info logged to console. Changes: ${Object.keys(booleanChanges).length}`);
-};
-
-window.clearChanges = function() {
-    resetBooleanChanges();
-    alert('Perubahan telah dibersihkan');
-};
