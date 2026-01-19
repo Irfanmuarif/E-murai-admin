@@ -108,7 +108,7 @@
         /* Style untuk ikon yang bisa diklik */
         .clickable-icon {
             cursor: pointer;
-            font-size: 1.3rem;
+            font-size: 1.5rem; /* Sedikit lebih besar untuk kotak ceklis */
             transition: transform 0.1s, color 0.2s;
         }
         .clickable-icon:hover {
@@ -222,6 +222,7 @@
     <script>
         // --- KONFIGURASI ---
         const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA']; 
+        // *** PERUBAHAN: URL API yang baru ***
         const API_URL = 'https://script.google.com/macros/s/AKfycbx1Zpj96b7T6GTu4FlFDo3BwvD096sX6WKxNk8DuNHsMY9vOhCR6RoNbOLktCzXRNt9/exec';
         
         // Sheet yang menggunakan ikon boolean
@@ -339,15 +340,15 @@
                         const icon = document.createElement('i');
                         icon.className = 'clickable-icon bi ';
                         
+                        // *** PERUBAHAN: Ikon kotak ceklis ***
                         if (cellValue) {
-                            icon.className += 'bi-check-circle-fill text-success';
+                            icon.className += 'bi-check-square-fill text-success'; // Kotak terceklis
                             icon.title = 'Selesai. Klik untuk ubah.';
                         } else {
-                            icon.className += 'bi-x-circle-fill text-danger';
+                            icon.className += 'bi-square text-secondary'; // Kotak kosong
                             icon.title = 'Belum Selesai. Klik untuk ubah.';
                         }
                         
-                        // *** PERUBAHAN: Pemanggilan fungsi toggleBoolean sudah tidak lagi mengirim nilai ***
                         icon.onclick = () => toggleBoolean(row._row, header, icon);
                         td.appendChild(icon);
                     } else {
@@ -518,30 +519,26 @@
             }
         }
 
-        // *** PERUBAHAN: Fungsi toggleBoolean yang diperbaiki ***
-        // --- FUNGSI UNTUK TOGGLE BOOLEAN (PERFORMA LEBIH CEPAT) ---
+        // --- FUNGSI UNTUK TOGGLE BOOLEAN ---
         async function toggleBoolean(rowNumber, columnName, iconElement) {
-            // 1. Tentukan status saat ini dari kelas ikon
-            const isCurrentlyTrue = iconElement.classList.contains('bi-check-circle-fill');
-            const newValue = !isCurrentlyTrue; // Nilai baru yang akan diset
+            // *** PERUBAHAN: Pengecekan status saat ini menggunakan ikon kotak ceklis ***
+            const isCurrentlyTrue = iconElement.classList.contains('bi-check-square-fill');
+            const newValue = !isCurrentlyTrue;
 
-            // Simpan state asli untuk reverts jika gagal
             const originalClasses = iconElement.className;
             const originalTitle = iconElement.title;
 
-            // 2. Berikan feedback visual INSTANT berdasarkan nilai baru
+            // *** PERUBAHAN: Feedback visual menggunakan ikon kotak ceklis ***
             if (newValue) {
-                iconElement.className = 'clickable-icon bi bi-check-circle-fill text-success';
+                iconElement.className = 'clickable-icon bi bi-check-square-fill text-success';
                 iconElement.title = 'Selesai. Klik untuk ubah.';
             } else {
-                iconElement.className = 'clickable-icon bi bi-x-circle-fill text-danger';
+                iconElement.className = 'clickable-icon bi bi-square text-secondary';
                 iconElement.title = 'Belum Selesai. Klik untuk ubah.';
             }
             
-            // 3. Tandai ikon sedang di-update
             iconElement.classList.add('updating');
 
-            // 4. Update data di memori untuk sinkronisasi
             const rowIndex = tableData.findIndex(row => row._row === rowNumber);
             if (rowIndex !== -1) {
                 tableData[rowIndex][columnName] = newValue;
@@ -569,17 +566,14 @@
                 showAlert(result.message || 'Status berhasil diperbarui!', 'success');
 
             } catch (error) {
-                // 5. JIKA GAGAL, kembalikan ikon dan data ke semula
                 showAlert('Gagal memperbarui status: ' + error.message, 'danger');
                 iconElement.className = originalClasses;
                 iconElement.title = originalTitle;
                 
-                // Kembalikan data di memori
                 if (rowIndex !== -1) {
-                    tableData[rowIndex][columnName] = isCurrentlyTrue; // Kembalikan ke nilai sebelum perubahan
+                    tableData[rowIndex][columnName] = isCurrentlyTrue;
                 }
             } finally {
-                // 6. Hapus tanda "updating"
                 iconElement.classList.remove('updating');
             }
         }
