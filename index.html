@@ -82,7 +82,7 @@
             max-width: 350px;
         }
         
-        /* --- PERUBAHAN UNTUK TABEL & MOBILE --- */
+        /* --- STYLE TABEL UMUM --- */
         .table-responsive {
             border-radius: 0.375rem;
             box-shadow: inset 0 0 0 1px #dee2e6;
@@ -91,7 +91,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 200px;
         }
         .icon-cell {
             width: 80px !important;
@@ -104,11 +103,9 @@
             max-width: 150px !important;
             white-space: nowrap;
         }
-
-        /* Style untuk ikon yang bisa diklik */
         .clickable-icon {
             cursor: pointer;
-            font-size: 1.5rem; /* Sedikit lebih besar untuk kotak ceklis */
+            font-size: 1.5rem;
             transition: transform 0.1s, color 0.2s;
         }
         .clickable-icon:hover {
@@ -118,6 +115,71 @@
             opacity: 0.5;
             pointer-events: none;
         }
+
+        /* --- STYLE KHUSUS UNTUK JADWAL RONDA (DIPERBAIKI) --- */
+        .compact-table {
+            font-size: 0.9rem;
+        }
+        /* *** PERUBAHAN: Header tidak lagi diputar dan diperkecil *** */
+        .compact-table thead th {
+            width: 80px !important; /* Diperbesar sedikit untuk teks horizontal */
+            max-width: 80px !important;
+            min-width: 80px !important;
+            padding: 5px !important;
+            vertical-align: middle !important; /* Diubah ke middle */
+            text-align: center !important; /* Teks di tengah */
+        }
+        .compact-table th:first-child,
+        .compact-table td:first-child {
+            width: 150px !important;
+            max-width: 150px !important;
+            min-width: 150px !important;
+            text-align: left !important; /* Kolom nama rata kiri */
+        }
+        .compact-table tbody td:not(.icon-cell):not(.action-cell):not(:first-child) {
+            max-width: 80px !important; /* Sesuaikan dengan lebar th */
+            text-align: center;
+        }
+
+        /* --- MEDIA QUERY UNTUK MOBILE --- */
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 10px;
+                margin-top: 15px;
+            }
+            .compact-table {
+                font-size: 0.75rem;
+            }
+            .compact-table thead th {
+                width: 60px !important;
+                max-width: 60px !important;
+                min-width: 60px !important;
+                padding: 2px !important;
+            }
+            .compact-table th:first-child,
+            .compact-table td:first-child {
+                width: 100px !important;
+                max-width: 100px !important;
+                min-width: 100px !important;
+                font-size: 0.8rem;
+            }
+            .compact-table tbody td:not(.icon-cell):not(.action-cell):not(:first-child) {
+                max-width: 60px !important;
+                padding: 2px !important;
+            }
+            .clickable-icon {
+                font-size: 1.2rem;
+            }
+            .action-cell {
+                width: 100px !important;
+                max-width: 100px !important;
+            }
+            .btn-sm {
+                padding: 0.15rem 0.3rem;
+                font-size: 0.75rem;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -222,7 +284,6 @@
     <script>
         // --- KONFIGURASI ---
         const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA']; 
-        // *** PERUBAHAN: URL API yang baru ***
         const API_URL = 'https://script.google.com/macros/s/AKfycbx1Zpj96b7T6GTu4FlFDo3BwvD096sX6WKxNk8DuNHsMY9vOhCR6RoNbOLktCzXRNt9/exec';
         
         // Sheet yang menggunakan ikon boolean
@@ -284,7 +345,7 @@
                 }
                 
                 currentHeaders = result.headers;
-                tableData = result.rows; // Simpan data tabel
+                tableData = result.rows; // Kembalikan ke semua data, filtering di renderTable
                 renderTable(result.headers, result.rows);
                 
             } catch (error) {
@@ -297,11 +358,19 @@
         }
 
         function renderTable(headers, rows) {
-            const tableHead = document.querySelector('#dataTable thead');
-            const tableBody = document.querySelector('#dataTable tbody');
+            const table = document.getElementById('dataTable');
+            const tableHead = table.querySelector('thead');
+            const tableBody = table.querySelector('tbody');
             
             tableHead.innerHTML = '';
             tableBody.innerHTML = '';
+
+            // Tambahkan atau hapus class 'compact-table'
+            if (currentSheet === 'JADWAL RONDA') {
+                table.classList.add('compact-table');
+            } else {
+                table.classList.remove('compact-table');
+            }
 
             if (headers.length === 0) {
                 const tr = document.createElement('tr');
@@ -314,10 +383,24 @@
                 return;
             }
 
+            // *** PERUBAHAN: Proses header dan kolom untuk tampilan JADWAL RONDA ***
+            let dataKeys = headers; // Kunci asli untuk akses data
+            let displayHeaders = headers; // Teks untuk ditampilkan di UI
+
+            if (currentSheet === 'JADWAL RONDA') {
+                const firstHeader = headers[0];
+                const lastTenHeaders = headers.slice(-10);
+                dataKeys = [firstHeader, ...lastTenHeaders];
+                
+                // Hapus tahun dari teks header untuk ditampilkan
+                displayHeaders = dataKeys.map(h => String(h).replace(/-\d{4}$/, ''));
+            }
+
             // Buat header
             const headerRow = document.createElement('tr');
-            headers.forEach(header => {
+            displayHeaders.forEach(header => {
                 const th = document.createElement('th');
+                // *** PERUBAHAN: Tidak perlu div wrapper lagi karena tidak diputar ***
                 th.textContent = header;
                 headerRow.appendChild(th);
             });
@@ -330,26 +413,25 @@
             // Buat baris data
             rows.forEach(row => {
                 const tr = document.createElement('tr');
-                headers.forEach(header => {
+                dataKeys.forEach(dataKey => { // Gunakan dataKeys untuk iterasi
                     const td = document.createElement('td');
-                    const cellValue = row[header];
+                    const cellValue = row[dataKey];
 
-                    // Tampilkan ikon untuk data boolean di sheet tertentu
                     if (BOOLEAN_SHEETS.includes(currentSheet) && typeof cellValue === 'boolean') {
                         td.className = 'icon-cell';
                         const icon = document.createElement('i');
                         icon.className = 'clickable-icon bi ';
                         
-                        // *** PERUBAHAN: Ikon kotak ceklis ***
                         if (cellValue) {
-                            icon.className += 'bi-check-square-fill text-success'; // Kotak terceklis
+                            icon.className += 'bi-check-square-fill text-success';
                             icon.title = 'Selesai. Klik untuk ubah.';
                         } else {
-                            icon.className += 'bi-square text-secondary'; // Kotak kosong
+                            icon.className += 'bi-square text-secondary';
                             icon.title = 'Belum Selesai. Klik untuk ubah.';
                         }
                         
-                        icon.onclick = () => toggleBoolean(row._row, header, icon);
+                        // Gunakan dataKey asli untuk API call
+                        icon.onclick = () => toggleBoolean(row._row, dataKey, icon);
                         td.appendChild(icon);
                     } else {
                         td.textContent = cellValue || '';
@@ -521,14 +603,12 @@
 
         // --- FUNGSI UNTUK TOGGLE BOOLEAN ---
         async function toggleBoolean(rowNumber, columnName, iconElement) {
-            // *** PERUBAHAN: Pengecekan status saat ini menggunakan ikon kotak ceklis ***
             const isCurrentlyTrue = iconElement.classList.contains('bi-check-square-fill');
             const newValue = !isCurrentlyTrue;
 
             const originalClasses = iconElement.className;
             const originalTitle = iconElement.title;
 
-            // *** PERUBAHAN: Feedback visual menggunakan ikon kotak ceklis ***
             if (newValue) {
                 iconElement.className = 'clickable-icon bi bi-check-square-fill text-success';
                 iconElement.title = 'Selesai. Klik untuk ubah.';
