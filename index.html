@@ -307,7 +307,7 @@
     <script>
         // --- KONFIGURASI ---
         const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA']; 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxYuTQQ9BCYrjF1o8EEy-3xKOmgJRbxGiKJcBn6oFzbNB4C3bntkw1Oh8tHG-o7qbZx/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzfuExMgPIoo9UyhCNw2ELhwCd73CQhxmYU7kKGRxjKuowGceHgDJpe_awkO8HTXfTz/exec';
         
         // Sheet yang menggunakan ikon boolean
         const BOOLEAN_SHEETS = ['IURAN BULANAN', 'JADWAL RONDA'];
@@ -515,6 +515,8 @@
             
             if (currentSheet === 'IURAN BULANAN' || currentSheet === 'JADWAL RONDA') {
                 generateSimplifiedFormFields();
+            } else if (currentSheet === 'UANG KAS') {
+                generateUangKasFormFields();
             } else {
                 generateFormFields();
             }
@@ -614,22 +616,138 @@
             formBody.appendChild(infoDiv);
         }
 
+        // *** FUNGSI BARU: Generate form fields khusus untuk UANG KAS ***
+        function generateUangKasFormFields() {
+            const formBody = document.getElementById('formModalBody');
+            formBody.innerHTML = '';
+
+            if (currentHeaders.length === 0) {
+                formBody.innerHTML = '<p class="text-muted">Tidak ada kolom untuk diisi.</p>';
+                return;
+            }
+
+            // Dapatkan bulan dan tanggal saat ini
+            const today = new Date();
+            const currentMonth = today.getMonth(); // 0-11
+            const currentDate = today.getDate();
+            const currentYear = today.getFullYear();
+            
+            // Format tanggal untuk input date (YYYY-MM-DD)
+            const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
+
+            // Daftar bulan
+            const months = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+
+            // Generate form fields untuk setiap header kecuali ID
+            currentHeaders.forEach((header, index) => {
+                // Lewati field ID
+                if (index === 0) return;
+
+                const formGroup = document.createElement('div');
+                formGroup.className = 'mb-3';
+                
+                const label = document.createElement('label');
+                label.htmlFor = `input-${header}`;
+                label.className = 'form-label';
+                label.textContent = header;
+                
+                // Jika header adalah "bulan", buat dropdown
+                if (header.toLowerCase() === 'bulan') {
+                    const select = document.createElement('select');
+                    select.className = 'form-select';
+                    select.id = `input-${header}`;
+                    select.name = header;
+                    
+                    // Tambahkan opsi bulan
+                    months.forEach((month, monthIndex) => {
+                        const option = document.createElement('option');
+                        option.value = month;
+                        option.textContent = month;
+                        
+                        // Set bulan saat ini sebagai default
+                        if (monthIndex === currentMonth) {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                    
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(select);
+                } 
+                // Jika header adalah "tanggal", buat input date
+                else if (header.toLowerCase() === 'tanggal') {
+                    const input = document.createElement('input');
+                    input.type = 'date';
+                    input.className = 'form-control';
+                    input.id = `input-${header}`;
+                    input.name = header;
+                    input.value = formattedDate;
+                    
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(input);
+                } 
+                // Untuk field lainnya, gunakan input text biasa
+                else {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.id = `input-${header}`;
+                    input.name = header;
+                    input.value = '';
+                    
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(input);
+                }
+                
+                formBody.appendChild(formGroup);
+            });
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'alert alert-info';
+            infoDiv.innerHTML = `<i class="bi bi-info-circle"></i> ID akan otomatis di-generate.`;
+            formBody.appendChild(infoDiv);
+        }
+
         async function handleFormSubmit(event) {
             event.preventDefault();
             const form = event.target;
             const formData = new FormData(form);
             let values = [];
 
-            if (currentAction === 'create' && (currentSheet === 'IURAN BULANAN' || currentSheet === 'JADWAL RONDA')) {
-                const firstColumnValue = formData.get(currentHeaders[0]) || '';
-                values = [firstColumnValue];
+            if (currentAction === 'create') {
+                if (currentSheet === 'IURAN BULANAN' || currentSheet === 'JADWAL RONDA') {
+                    const firstColumnValue = formData.get(currentHeaders[0]) || '';
+                    values = [firstColumnValue];
 
-                for (let i = 1; i < currentHeaders.length; i++) {
-                    if (currentSheet === 'JADWAL RONDA' && String(currentHeaders[i]).toLowerCase() === 'terakhir ronda') {
-                        values.push('');
-                    } else {
-                        values.push(false);
+                    for (let i = 1; i < currentHeaders.length; i++) {
+                        if (currentSheet === 'JADWAL RONDA' && String(currentHeaders[i]).toLowerCase() === 'terakhir ronda') {
+                            values.push('');
+                        } else {
+                            values.push(false);
+                        }
                     }
+                } 
+                // *** LOGIKA BARU: Untuk UANG KAS, kumpulkan nilai dari form tanpa ID ***
+                else if (currentSheet === 'UANG KAS') {
+                    // Lewati header pertama (ID) dan kumpulkan nilai dari form
+                    for (let i = 1; i < currentHeaders.length; i++) {
+                        const header = currentHeaders[i];
+                        const value = formData.get(header) || '';
+                        values.push(value);
+                    }
+                } 
+                else {
+                    values = currentHeaders.map(header => {
+                        const val = formData.get(header);
+                        if (typeof form.elements[`input-${header}`]?.type === 'checkbox') {
+                            return val === 'on';
+                        }
+                        return val || '';
+                    });
                 }
             } else {
                 values = currentHeaders.map(header => {
