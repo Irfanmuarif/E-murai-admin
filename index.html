@@ -363,47 +363,94 @@
             color: var(--text-main);
         }
 
-        /* --- PENGUMUMAN CARD --- */
+        /* --- PENGUMUMAN CARD (IMPROVED) --- */
         .pengumuman-item {
             background: var(--surface);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            margin-bottom: 15px;
-            padding: 15px;
+            margin-bottom: 20px; /* Jarak antar kartu */
+            padding: 20px;
             box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
+        .pengumuman-item:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .pengumuman-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
         .pengumuman-title {
             font-weight: 700;
-            color: #4f46e5;
-            margin-bottom: 8px;
+            color: #4f46e5; /* Indigo color */
             font-size: 1.1rem;
+            line-height: 1.4;
+            margin: 0;
+            padding-right: 10px;
         }
+
+        .pengumuman-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background-color: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
         .pengumuman-body {
-            color: var(--text-main);
+            color: #374151; /* Dark gray for readability */
             font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 10px;
+            line-height: 1.6;
+            margin-bottom: 15px;
         }
-        /* Line Clamp for partial view */
+
+        /* Class untuk memotong teks (Truncate) */
         .pengumuman-body.truncated {
             display: -webkit-box;
-            -webkit-line-clamp: 2; /* Tampilkan 2 baris */
+            -webkit-line-clamp: 3; /* Tampilkan hanya 3 baris */
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
-            color: var(--text-muted); /* Sedikit pudar jika dipotong */
+            color: #4b5563; /* Sedikit lebih pudar saat dipotong */
         }
+
+        .pengumuman-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #f3f4f6;
+            margin-top: 12px;
+        }
+
+        .pengumuman-sender {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .pengumuman-btn-toggle {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--fb-blue);
-            background: none;
+            background: rgba(24, 119, 242, 0.1);
             border: none;
-            padding: 0;
+            padding: 6px 12px;
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.2s;
         }
         .pengumuman-btn-toggle:hover {
-            text-decoration: underline;
+            background: rgba(24, 119, 242, 0.2);
+            color: #146cd4;
         }
 
         /* --- ICONS & CLICKABLE --- */
@@ -530,13 +577,21 @@
             .table th:first-child, .table td:first-child {
                 min-width: 90px;
             }
+            
+            /* Pengumuman Mobile Tweak */
+            .pengumuman-item {
+                padding: 15px;
+            }
+            .pengumuman-title {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
 <body>
 
     <!-- Loader -->
-    <div id="loader" class="loader" style="display: none;">
+    <div id="loader" class="loader d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100" style="z-index: 2000; display: none;">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
@@ -556,7 +611,7 @@
     </nav>
 
     <!-- Alert Container -->
-    <div class="alert-container" id="alertContainer"></div>
+    <div class="alert-container fixed-top m-3" id="alertContainer" style="z-index: 1050; max-width: 400px;"></div>
 
     <!-- Main Content -->
     <main class="container">
@@ -649,7 +704,8 @@
     <script>
         // --- KONFIGURASI ---
         const SHEETS = ['PENGUMUMAN', 'UANG KAS', 'IURAN BULANAN', 'JADWAL RONDA']; 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz3jfwGsX6_2pTpStnVVnEnTwWwQgEqYpjUZPsP36_dTGZjzg1hyfQTFvxp89C2PGsh/exec';
+        // Ganti URL_API ini dengan URL Web App Google Script Anda
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxHKzkb3Jl0G_Fg0TiNJfIYfQrhadBKTMae0hGcpD3JYHhJcjNvaf-fYcgRo4CP4mPi/exec';
         
         // Sheet yang menggunakan ikon boolean
         const BOOLEAN_SHEETS = ['IURAN BULANAN', 'JADWAL RONDA'];
@@ -812,32 +868,22 @@
 
             // LOGIKA KHUSUS JADWAL RONDA
             if (currentSheet === 'JADWAL RONDA') {
-                // 1. Rename "Terakhir Ronda" -> "Hari"
                 const renamedHeaders = headers.map(h => String(h).toLowerCase() === "terakhir ronda" ? "Hari" : h);
-                
-                // 2. Shorten Date Headers ("03-Jan-2026" -> "03-Jan")
                 displayHeaders = renamedHeaders.map(h => {
                     if (typeof h !== 'string') return h;
-                    // Regex cari pola tanggal
                     if (/^\d{2}-\w{3}-\d{4}$/.test(h)) {
                         return h.substring(0, 6); 
                     }
                     return h;
                 });
 
-                // Sort by 'Terakhir Ronda' (renamed to "Hari") Descending
-                const lastRondaIndex = renamedHeaders.findIndex(h => String(h).toLowerCase() === "hari"); // Cari index "Hari"
+                const lastRondaIndex = renamedHeaders.findIndex(h => String(h).toLowerCase() === "hari"); 
                 if (lastRondaIndex !== -1) {
-                    // Sort berdasarkan header original (yang ada tahun) agar urutan benar
-                    // Tapi untuk ditampilkan kita pakai displayHeaders
-                    
-                    // Ambil header asli untuk sortir
                     const originalHeaderKey = headers[lastRondaIndex]; 
-                    
                     workingRows.sort((a, b) => {
                         const valA = parseInt(a[originalHeaderKey]) || 0;
                         const valB = parseInt(b[originalHeaderKey]) || 0;
-                        return valB - valA; // Terbesar ke Terkecil
+                        return valB - valA; 
                     });
                 }
             }
@@ -856,9 +902,7 @@
 
             workingRows.forEach(row => {
                 const tr = document.createElement('tr');
-                // Mapping displayHeaders ke keys asli
                 dataKeys.forEach((originalKey, idx) => {
-                    const displayHeader = displayHeaders[idx];
                     const td = document.createElement('td');
                     const cellValue = row[originalKey];
                     
@@ -903,7 +947,6 @@
                 tableBody.appendChild(tr);
             });
             
-            // Scroll Logic for Mobile Jadwal Ronda
             if (currentSheet === 'JADWAL RONDA' && window.innerWidth <= 768) {
                 setTimeout(() => {
                     const container = tableElement.closest('.table-responsive');
@@ -914,43 +957,73 @@
             }
         }
 
-        // --- FUNGSI RENDER PENGUMUMAN (SEBAGIAN) ---
+        // --- FUNGSI RENDER PENGUMUMAN (DIUPDATE SESUAI REQUEST) ---
         function renderPengumumanPartial(rows, container) {
+            // Tampilkan tombol Tambah pada header saat di menu Pengumuman
+            document.getElementById('actionHeader').classList.remove('d-none');
+            document.querySelector('#actionHeader h4').innerText = 'Pengumuman Terbaru';
+
             if (rows.length === 0) {
-                container.innerHTML = '<div class="text-center py-5 text-muted">Tidak ada pengumuman.</div>';
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted bg-white rounded-3 shadow-sm border">
+                        <i class="bi bi-megaphone fs-1 mb-3 d-block text-muted opacity-50"></i>
+                        <p>Belum ada pengumuman.</p>
+                    </div>`;
                 return;
             }
 
-            rows.forEach(row => {
+            // Urutkan dari yang terbaru (asumsi baris paling bawah di spreadsheet adalah terbaru, atau berdasarkan ID/Tanggal)
+            // Disini kita urutkan descending berdasarkan row number (bawaan array dari Google Script biasanya urut ID)
+            // Kita reverse agar yang terbaru di atas
+            const sortedRows = [...rows].reverse();
+
+            sortedRows.forEach(row => {
                 const card = document.createElement('div');
                 card.className = 'pengumuman-item';
                 
-                // Asumsi struktur: kolom 0 = Judul, kolom 1 = Isi
-                const judul = row[Object.keys(row)[0]] || "Tanpa Judul";
-                const isi = row[Object.keys(row)[1]] || "";
-                const date = row[Object.keys(row)[2]] || formatDateDisplay(row[Object.keys(row)[2]]);
+                // PEMETAKAN KOLOM SESUAI REQUEST USER:
+                // Header: ID, Tanggal, Judul, Isi, Pengirim
+                // ID: row['ID']
+                // Tanggal: row['Tanggal']
+                // Judul (Col 3): row['Judul']
+                // Isi (Col 4): row['Isi']
+                // Pengirim: row['Pengirim']
+                
+                const judul = row['Judul'] || "Tanpa Judul";
+                const isi = row['Isi'] || "<i class='text-muted'>Tidak ada isi pengumuman.</i>";
+                const tanggal = formatDateDisplay(row['Tanggal']);
+                const pengirim = row['Pengirim'] || "Admin";
                 
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="pengumuman-header">
                         <div class="pengumuman-title">${judul}</div>
-                        <small class="text-muted" style="font-size:0.8rem;">${date}</small>
+                        <div class="pengumuman-date">
+                            <i class="bi bi-calendar3 me-1"></i>${tanggal}
+                        </div>
                     </div>
                     <div class="pengumuman-body truncated" id="pengumuman-body-${row._row}">
                         ${isi}
                     </div>
-                    <div class="text-end">
+                    <div class="pengumuman-footer">
+                        <div class="pengumuman-sender">
+                            <i class="bi bi-person-circle"></i> ${pengirim}
+                        </div>
                         <button class="pengumuman-btn-toggle" onclick="togglePengumuman(${row._row}, this)">
-                            Baca Selengkapnya...
+                            Baca Selengkapnya
                         </button>
                     </div>
-                    <!-- Tombol Edit/Hapus (Optional, jika pengumuman mau diedit) -->
-                    <div class="mt-2 pt-2 border-top d-flex justify-content-end gap-2">
-                        <button class="btn btn-sm btn-outline-warning" onclick="openUpdateModal(${row._row}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${row._row})">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
+                    
+                    <!-- Tombol Aksi Edit/Hapus (Kecil di pojok kanan bawah atau via icon) -->
+                    <div class="position-absolute" style="top: 15px; right: 15px;">
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li><a class="dropdown-item text-primary" href="#" onclick="openUpdateModal(${row._row}, ${JSON.stringify(row).replace(/"/g, '&quot;')})"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="openDeleteModal(${row._row})"><i class="bi bi-trash me-2"></i>Hapus</a></li>
+                            </ul>
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -959,12 +1032,20 @@
 
         function togglePengumuman(rowId, btnElement) {
             const bodyEl = document.getElementById(`pengumuman-body-${rowId}`);
+            
+            // Cek apakah sedang dipotong (truncated) atau tidak
             if (bodyEl.classList.contains('truncated')) {
+                // Buka full
                 bodyEl.classList.remove('truncated');
                 btnElement.textContent = "Tutup";
+                btnElement.style.background = "#f3f4f6";
+                btnElement.style.color = "#374151";
             } else {
+                // Tutup kembali
                 bodyEl.classList.add('truncated');
-                btnElement.textContent = "Baca Selengkapnya...";
+                btnElement.textContent = "Baca Selengkapnya";
+                btnElement.style.background = "rgba(24, 119, 242, 0.1)";
+                btnElement.style.color = "#1877f2";
             }
         }
 
@@ -1010,14 +1091,11 @@
 
             const formatPeriodeDisplay = (rawVal) => {
                 if (!rawVal) return 'Tanpa Periode';
-                
                 if (typeof rawVal === 'string' && !rawVal.includes('T') && isNaN(new Date(rawVal).getTime())) {
                     return rawVal;
                 }
-
                 const dateObj = new Date(rawVal);
                 if (isNaN(dateObj.getTime())) return String(rawVal);
-
                 return dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
             };
 
@@ -1025,12 +1103,8 @@
                 const rawPeriode = row[keyPeriode];
                 const displayPeriode = formatPeriodeDisplay(rawPeriode);
                 const refDate = row[keyTanggal] ? new Date(row[keyTanggal]) : new Date(0);
-
                 if (!acc[displayPeriode]) {
-                    acc[displayPeriode] = {
-                        rows: [],
-                        sortDate: refDate
-                    };
+                    acc[displayPeriode] = { rows: [], sortDate: refDate };
                 }
                 acc[displayPeriode].rows.push(row);
                 if (refDate > acc[displayPeriode].sortDate) {
@@ -1039,9 +1113,7 @@
                 return acc;
             }, {});
 
-            const sortedPeriodKeys = Object.keys(groups).sort((a, b) => {
-                return groups[b].sortDate - groups[a].sortDate;
-            });
+            const sortedPeriodKeys = Object.keys(groups).sort((a, b) => groups[b].sortDate - groups[a].sortDate);
 
             sortedPeriodKeys.forEach((periode, index) => {
                 const groupData = groups[periode];
@@ -1098,7 +1170,6 @@
                 
                 const tableWrapper = document.createElement('div');
                 tableWrapper.className = 'table-responsive'; 
-                
                 const table = document.createElement('table');
                 table.className = 'table table-hover align-middle';
 
@@ -1204,7 +1275,12 @@
                 return;
             }
 
+            // Filter out ID column usually, but for now we keep all logic generic
             currentHeaders.forEach(header => {
+                // Skip 'ID' column for editing usually, but here we assume user might need to see it
+                // Let's disable ID input
+                if (header === 'ID') return; 
+
                 const formGroup = document.createElement('div');
                 formGroup.className = 'mb-3';
                 
@@ -1223,9 +1299,19 @@
                     input.checked = data[header];
                     formGroup.appendChild(input);
                     formGroup.appendChild(label);
+                } else if (header.toLowerCase().includes('isi') || header.toLowerCase().includes('keterangan')) {
+                    // Use textarea for 'Isi' Pengumuman
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'form-control';
+                    textarea.id = `input-${header}`;
+                    textarea.name = header;
+                    textarea.rows = 5;
+                    textarea.value = (data[header] !== undefined && data[header] !== null) ? data[header] : '';
+                    formGroup.appendChild(label);
+                    formGroup.appendChild(textarea);
                 } else {
                     const input = document.createElement('input');
-                    input.type = 'text';
+                    input.type = (header.toLowerCase().includes('tanggal')) ? 'date' : 'text';
                     input.className = 'form-control';
                     input.id = `input-${header}`;
                     input.name = header;
@@ -1574,15 +1660,17 @@
 
         // --- UTILITIES ---
         function showLoader(show) {
-            document.getElementById('loader').style.display = show ? 'flex' : 'none';
+            const loader = document.getElementById('loader');
+            loader.style.display = show ? 'flex' : 'none';
         }
 
         function showAlert(message, type) {
             const alertContainer = document.getElementById('alertContainer');
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show shadow-sm border-0`;
+            alertDiv.style.minWidth = "250px";
             alertDiv.innerHTML = `
-                ${message}
+                <small>${message}</small>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             alertContainer.appendChild(alertDiv);
