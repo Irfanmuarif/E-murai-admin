@@ -80,6 +80,7 @@
         }
 
         /* --- MAIN APP CONTAINER --- */
+        /* Secara default sembunyikan sampai login sukses */
         #appContainer {
             display: none; 
         }
@@ -816,25 +817,16 @@
             loadData(currentSheet);
         }
 
-        // --- FUNGSI UTAMA FORMAT TANGGAL (PERBAIKAN) ---
         function formatDateDisplay(value) {
             if (!value) return '';
-            
-            // Langsung ubah ke Object Date
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return value;
+            }
             let dateObj = (typeof value === 'string') ? new Date(value) : value;
-            
             if (value instanceof Date) dateObj = value;
             else return value; 
-            
-            // Cek apakah tanggal valid
             if (isNaN(dateObj.getTime())) return value; 
-            
-            // --- PERBAIKAN: Menggunakan UTC untuk mendapatkan tanggal yang tepat sesuai data ---
-            // Menggunakan getUTC... mencegah tanggal mundur/maju karena perbedaan jam zona waktu komputer
-            const day = String(dateObj.getUTCDate()).padStart(2, '0');
-            const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-            const year = dateObj.getUTCFullYear();
-            return `${day}-${month}-${year}`;
+            return dateObj.toLocaleDateString('en-CA'); 
         }
 
         function formatDateForInput(value) {
@@ -848,7 +840,6 @@
                 return '';
             }
             if (isNaN(d.getTime())) return '';
-            // Fix timezone offset agar tanggal tidak mundur 1 hari
             const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
             return date.toISOString().split('T')[0];
         }
@@ -948,7 +939,14 @@
                         icon.onclick = () => toggleBoolean(row._row, originalKey, icon);
                         td.appendChild(icon);
                     } else {
-                        td.textContent = cellValue || '-';
+                        if (
+                            typeof cellValue === 'string' &&
+                            (cellValue.includes('T') || /^\d{4}-\d{2}-\d{2}$/.test(cellValue))
+                        ) {
+                            td.textContent = formatDateDisplay(cellValue);
+                        } else {
+                            td.textContent = cellValue || '-';
+                        }
                     }
                     tr.appendChild(td);
                 });
@@ -1126,11 +1124,8 @@
                 
                 groupRows.forEach(row => {
                     const tr = document.createElement('tr');
-                    // PENTING: Disini memanggil formatDateDisplay
-                    const displayDate = formatDateDisplay(row[keyTanggal]);
-                    
                     tr.innerHTML = `
-                        <td class="fw-bold text-secondary">${displayDate}</td>
+                        <td class="fw-bold text-secondary">${formatDateDisplay(row[keyTanggal])}</td>
                         <td>${row[keyKet] || ''}</td>
                         <td class="text-end text-success fw-semibold">${row[keyMasuk] ? parseInt(row[keyMasuk]).toLocaleString('id-ID') : '-'}</td>
                         <td class="text-end text-danger fw-semibold">${row[keyKeluar] ? parseInt(row[keyKeluar]).toLocaleString('id-ID') : '-'}</td>
@@ -1417,7 +1412,6 @@
         async function toggleBoolean(rowNumber, columnName, iconElement) {
             const isCurrentlyTrue = iconElement.classList.contains('bi-check-circle-fill');
             const newValue = !isCurrentlyTrue;
-
             const originalClasses = iconElement.className;
             const originalTitle = iconElement.title;
 
