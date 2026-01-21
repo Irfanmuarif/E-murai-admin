@@ -939,14 +939,7 @@
                         icon.onclick = () => toggleBoolean(row._row, originalKey, icon);
                         td.appendChild(icon);
                     } else {
-                        if (
-                            typeof cellValue === 'string' &&
-                            (cellValue.includes('T') || /^\d{4}-\d{2}-\d{2}$/.test(cellValue))
-                        ) {
-                            td.textContent = formatDateDisplay(cellValue);
-                        } else {
-                            td.textContent = cellValue || '-';
-                        }
+                        td.textContent = cellValue || '-';
                     }
                     tr.appendChild(td);
                 });
