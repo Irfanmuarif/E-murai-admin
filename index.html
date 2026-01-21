@@ -80,7 +80,6 @@
         }
 
         /* --- MAIN APP CONTAINER --- */
-        /* Secara default sembunyikan sampai login sukses */
         #appContainer {
             display: none; 
         }
@@ -817,6 +816,7 @@
             loadData(currentSheet);
         }
 
+        // --- FUNGSI UTAMA FORMAT TANGGAL (PERBAIKAN) ---
         function formatDateDisplay(value) {
             if (!value) return '';
             
@@ -829,12 +829,14 @@
             // Cek apakah tanggal valid
             if (isNaN(dateObj.getTime())) return value; 
             
-            // --- BAGIAN DIUBAH (FORMAT DD-MM-YYYY) ---
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const year = dateObj.getFullYear();
+            // --- PERBAIKAN: Menggunakan UTC untuk mendapatkan tanggal yang tepat sesuai data ---
+            // Menggunakan getUTC... mencegah tanggal mundur/maju karena perbedaan jam zona waktu komputer
+            const day = String(dateObj.getUTCDate()).padStart(2, '0');
+            const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+            const year = dateObj.getUTCFullYear();
             return `${day}-${month}-${year}`;
         }
+
         function formatDateForInput(value) {
             if (!value) return '';
             let d;
@@ -846,6 +848,7 @@
                 return '';
             }
             if (isNaN(d.getTime())) return '';
+            // Fix timezone offset agar tanggal tidak mundur 1 hari
             const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
             return date.toISOString().split('T')[0];
         }
@@ -1123,8 +1126,11 @@
                 
                 groupRows.forEach(row => {
                     const tr = document.createElement('tr');
+                    // PENTING: Disini memanggil formatDateDisplay
+                    const displayDate = formatDateDisplay(row[keyTanggal]);
+                    
                     tr.innerHTML = `
-                        <td class="fw-bold text-secondary">${formatDateDisplay(row[keyTanggal])}</td>
+                        <td class="fw-bold text-secondary">${displayDate}</td>
                         <td>${row[keyKet] || ''}</td>
                         <td class="text-end text-success fw-semibold">${row[keyMasuk] ? parseInt(row[keyMasuk]).toLocaleString('id-ID') : '-'}</td>
                         <td class="text-end text-danger fw-semibold">${row[keyKeluar] ? parseInt(row[keyKeluar]).toLocaleString('id-ID') : '-'}</td>
@@ -1411,6 +1417,7 @@
         async function toggleBoolean(rowNumber, columnName, iconElement) {
             const isCurrentlyTrue = iconElement.classList.contains('bi-check-circle-fill');
             const newValue = !isCurrentlyTrue;
+
             const originalClasses = iconElement.className;
             const originalTitle = iconElement.title;
 
