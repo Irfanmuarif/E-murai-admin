@@ -80,7 +80,6 @@
         }
 
         /* --- MAIN APP CONTAINER --- */
-        /* Secara default sembunyikan sampai login sukses */
         #appContainer {
             display: none; 
         }
@@ -717,16 +716,13 @@
 
     <script>
         // --- CONFIG LOGIN ---
-        // GANTI PASSWORD DI SINI
         const ADMIN_PASSWORD = "admin123";
         
-        // Cek apakah user sudah login sebelumnya
         document.addEventListener('DOMContentLoaded', () => {
             const isLoggedin = localStorage.getItem('isAdminLogged');
             if (isLoggedin === 'true') {
                 showApp();
             } else {
-                // Biarkan tampilan login
                 document.getElementById('adminPassword').focus();
             }
         });
@@ -736,15 +732,12 @@
             const errorMsg = document.getElementById('loginError');
 
             if (inputPass === ADMIN_PASSWORD) {
-                // Password Benar
-                localStorage.setItem('isAdminLogged', 'true'); // Ingat user
+                localStorage.setItem('isAdminLogged', 'true');
                 showApp();
             } else {
-                // Password Salah
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPassword').classList.add('is-invalid');
                 
-                // Shake effect
                 const card = document.querySelector('.login-card');
                 card.style.transform = 'translateX(10px)';
                 setTimeout(() => card.style.transform = 'translateX(-10px)', 100);
@@ -755,7 +748,6 @@
         function showApp() {
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
-            // Inisialisasi App setelah login
             initializeApp();
         }
 
@@ -817,31 +809,52 @@
             loadData(currentSheet);
         }
 
+        // --- FUNGSI FORMAT TANGGAL (FIXED TIMEZONE) ---
         function formatDateDisplay(value) {
             if (!value) return '';
-            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            let dateObj;
+
+            // Handle String ISO (UTC) atau Objek Date
+            if (typeof value === 'string') {
+                dateObj = new Date(value);
+            } else if (value instanceof Date) {
+                dateObj = value;
+            } else {
                 return value;
             }
-            let dateObj = (typeof value === 'string') ? new Date(value) : value;
-            if (value instanceof Date) dateObj = value;
-            else return value; 
-            if (isNaN(dateObj.getTime())) return value; 
-            return dateObj.toLocaleDateString('en-CA'); 
+
+            // Validasi tanggal
+            if (isNaN(dateObj.getTime())) return value;
+
+            // Gunakan Timezone Asia/Jakarta (WIB) agar sesuai dengan sheet
+            const options = { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' };
+            
+            // toLocaleDateString('en-US') menghasilkan format bulan pendek (Jan, Feb, dll)
+            const parts = dateObj.toLocaleDateString('en-US', options).split(' '); // format: "Jan 29, 2024" atau "Jan 29, 2024"
+            
+            // parts[0] = Month, parts[1] = Day, parts[2] = Year
+            // Kita ubah urutan menjadi Day-Month-Year
+            return `${parts[1]}-${parts[0]}-${parts[2]}`;
         }
 
         function formatDateForInput(value) {
             if (!value) return '';
-            let d;
+            let dateObj;
             if (typeof value === 'string') {
-                d = new Date(value);
+                dateObj = new Date(value);
             } else if (value instanceof Date) {
-                d = value;
+                dateObj = value;
             } else {
                 return '';
             }
-            if (isNaN(d.getTime())) return '';
-            const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
-            return date.toISOString().split('T')[0];
+
+            if (isNaN(dateObj.getTime())) return '';
+            
+            // Format YYYY-MM-DD untuk input HTML date, sesuai WIB
+            const y = dateObj.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' });
+            const m = dateObj.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', month: '2-digit' });
+            const d = dateObj.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', day: '2-digit' });
+            return `${y}-${m}-${d}`;
         }
 
         async function loadData(sheetName) {
@@ -979,9 +992,9 @@
             rows.forEach(row => {
                 const card = document.createElement('div');
                 card.className = 'pengumuman-item';
-                const judulKey = currentHeaders[2]; // Kolom ke-3 (Index 2)
-                const isiKey = currentHeaders[3];    // Kolom ke-4 (Index 3)
-                const dateKey = currentHeaders[1];   // Kolom ke-2 (Index 1)
+                const judulKey = currentHeaders[2]; 
+                const isiKey = currentHeaders[3];    
+                const dateKey = currentHeaders[1];   
 
                 const judul = (judulKey) ? (row[judulKey] || "Tanpa Judul") : "Format Data Salah (Judul)";
                 const isi = (isiKey) ? (row[isiKey] || "") : "";
@@ -1052,10 +1065,18 @@
             const keyTanggal = headers.find(h => h.toLowerCase() === 'tanggal') || headers[2];
             const keyKet = headers.find(h => h.toLowerCase().includes('keterangan')) || headers[3];
 
+            // Helper untuk mendapatkan objek tanggal valid
+            const getValidDate = (val) => {
+                if (!val) return new Date(0);
+                if (typeof val === 'string') return new Date(val);
+                if (val instanceof Date) return val;
+                return new Date(0);
+            };
+
             const formatPeriodeDisplay = (rawVal) => {
                 if (!rawVal) return 'Tanpa Periode';
                 if (typeof rawVal === 'string' && !rawVal.includes('T') && isNaN(new Date(rawVal).getTime())) return rawVal;
-                const dateObj = new Date(rawVal);
+                const dateObj = getValidDate(rawVal);
                 if (isNaN(dateObj.getTime())) return String(rawVal);
                 return dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
             };
@@ -1063,20 +1084,37 @@
             const groups = rows.reduce((acc, row) => {
                 const rawPeriode = row[keyPeriode];
                 const displayPeriode = formatPeriodeDisplay(rawPeriode);
-                const refDate = row[keyTanggal] ? new Date(row[keyTanggal]) : new Date(0);
-                if (!acc[displayPeriode]) { acc[displayPeriode] = { rows: [], sortDate: refDate }; }
+                const refDate = getValidDate(row[keyTanggal]);
+                
+                if (!acc[displayPeriode]) { 
+                    acc[displayPeriode] = { rows: [], sortDate: refDate }; 
+                }
                 acc[displayPeriode].rows.push(row);
-                if (refDate > acc[displayPeriode].sortDate) acc[displayPeriode].sortDate = refDate;
+                
+                // Update tanggal referensi periode jika ada transaksi lebih baru di periode yang sama
+                if (refDate > acc[displayPeriode].sortDate) {
+                    acc[displayPeriode].sortDate = refDate;
+                }
                 return acc;
             }, {});
 
-            const sortedPeriodKeys = Object.keys(groups).sort((a, b) => groups[b].sortDate - groups[a].sortDate);
+            // Sorting Periode (Terbaru di atas)
+            const sortedPeriodKeys = Object.keys(groups).sort((a, b) => {
+                return groups[b].sortDate - groups[a].sortDate;
+            });
 
             sortedPeriodKeys.forEach((periode, index) => {
                 const groupData = groups[periode];
-                const groupRows = groupData.rows;
+                let groupRows = groupData.rows;
+
+                // Sorting Transaksi di dalam Periode (Terbaru di atas)
+                groupRows.sort((a, b) => {
+                    const dateA = getValidDate(a[keyTanggal]);
+                    const dateB = getValidDate(b[keyTanggal]);
+                    return dateB - dateA;
+                });
+
                 let totalMasuk = 0, totalKeluar = 0;
-                
                 groupRows.forEach(r => { totalMasuk += (parseFloat(r[keyMasuk]) || 0); totalKeluar += (parseFloat(r[keyKeluar]) || 0); });
                 const saldo = totalMasuk - totalKeluar;
 
@@ -1289,7 +1327,7 @@
                 else if (valKeluar > 0) { initialJenis = 'pengeluaran'; initialJumlah = valKeluar; }
             }
 
-            const formattedDate = `${initialDate.getFullYear()}-${String(initialDate.getMonth() + 1).padStart(2, '0')}-${String(initialDate.getDate()).padStart(2, '0')}`;
+            const formattedDate = formatDateForInput(initialDate);
 
             const dateGroup = document.createElement('div');
             dateGroup.className = 'mb-3';
